@@ -6,6 +6,12 @@ The CLI owns orchestration and artifacts. OpenRouter handles prompt expansion an
 
 ## Install
 
+### Agent-Assisted Setup
+
+This package includes agent-facing setup instructions in `AGENTS.md` and `.agents/`. You can ask a local coding agent to use them to help install the CLI, configure OpenRouter, and wire GPU backends such as TRELLIS.2 or SkinTokens.
+
+This path is experimental: backend setup may install system packages, GPU runtimes, model repositories, and large checkpoints. Review the commands your agent proposes before approving them, and keep secrets, checkpoints, generated runs, and virtual environments out of git.
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
