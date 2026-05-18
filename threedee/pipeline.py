@@ -409,9 +409,9 @@ def _format_command(
     seed: int | None,
 ) -> str:
     values = {
-        "input": str(input_path),
-        "output": str(output_path),
-        "run_dir": str(run_dir),
+        "input": str(input_path.resolve()),
+        "output": str(output_path.resolve()),
+        "run_dir": str(run_dir.resolve()),
         "prompt": prompt.replace('"', '\\"'),
         "seed": "" if seed is None else str(seed),
     }
