@@ -12,6 +12,8 @@ This package includes agent-facing setup instructions in `AGENTS.md` and `.agent
 
 This path is experimental: backend setup may install system packages, GPU runtimes, model repositories, and large checkpoints. Review the commands your agent proposes before approving them, and keep secrets, checkpoints, generated runs, and virtual environments out of git.
 
+Before running GPU backends, check whether the selected model repositories require accepted licenses or gated access. Some mesh backends depend on multiple Hugging Face models, not just the main backend checkpoint. Authenticate in the same environment and OS user that will run the backend command.
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -76,6 +78,8 @@ Edit `threedee.toml` on the target GPU machine and fill in the local stage comma
 - `{seed}`: seed, if provided
 
 Quote placeholders in commands because run paths can contain spaces on Windows.
+
+For local GPU backends, prefer an ignored `threedee.local.toml` command that calls a small wrapper script. The wrapper should pin or document the exact upstream model IDs it uses, stream progress and download logs to stdout/stderr, and write the expected `{output}` artifact. First runs may download many gigabytes and may use substantial CPU RAM while checkpoints are assembled before GPU execution begins.
 
 ## Commands
 

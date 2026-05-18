@@ -40,6 +40,9 @@ When helping a user set up a GPU machine:
 - Ask how the user wants to store OpenRouter secrets. Prefer `threedee config set-openrouter --shared-api-key ...`, which writes to ignored `threedee.local.toml`; environment variables are also acceptable.
 - Keep `threedee.toml` as shared defaults. Put machine-specific commands, paths, endpoints, model names, and secrets in ignored local config.
 - Install and test each heavy backend manually before wiring it into `threedee`. A stage command is ready only when it can take the documented placeholders and create the expected artifact path.
+- Before first inference, identify all gated or license-restricted model repositories used by a backend and ask the user to request/accept access where needed. Authenticate in the same environment and user account that will execute the backend command.
+- Prefer explicit model IDs, revisions, or locally documented versions for upstream checkpoints. If a backend's dependencies are known to be sensitive to library versions, record the tested model IDs and relevant package versions in agent notes.
+- Expect first backend runs to download large checkpoints and to use CPU RAM while loading or assembling models before work moves to the GPU. Make wrappers stream progress/download logs to stdout/stderr so `threedee` can surface them while also writing stage logs.
 - For image-to-3D mesh generation, guide reference image prompts toward one isolated subject in one view. Avoid character sheets, turnarounds, split-screen views, text, or duplicate subjects unless the selected backend explicitly supports multi-view input.
 - Record reusable setup findings in `.agents/handoff.md` or `.agents/setup.md`, but do not record API keys, checkpoint tokens, or private paths that should remain local.
 
