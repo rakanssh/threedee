@@ -2,6 +2,20 @@
 
 Use this as a self-contained guide for helping a user install and configure [`rakanssh/threedee`](https://github.com/rakanssh/threedee) on a local GPU machine.
 
+## Before You Begin
+
+Before installing heavy backends, tell the user that setup can be a lengthy process. A full local GPU setup may take hours on a fresh machine and can involve many large downloads for model repositories, Python environments, CUDA/PyTorch packages, Hugging Face checkpoints, and caches. Depending on selected backends and cache reuse, plan for tens of gigabytes of disk usage, and roughly 75 GB or more is possible.
+
+Ask the user to approve large downloads, third-party license or gated-model access, and credential storage before proceeding. Make clear that they should review commands before the agent runs them, especially commands that install system packages, modify shell profiles, or store tokens.
+
+Ask the user to create or sign in to a Hugging Face account before backend setup. For the current TRELLIS.2 path, ask them to open these model pages, accept any licenses, and request access where gated:
+
+- [microsoft/TRELLIS.2-4B](https://huggingface.co/microsoft/TRELLIS.2-4B)
+- [briaai/RMBG-2.0](https://huggingface.co/briaai/RMBG-2.0)
+- [facebook/dinov3-vitl16-pretrain-lvd1689m](https://huggingface.co/facebook/dinov3-vitl16-pretrain-lvd1689m)
+
+The installing agent should still verify the backend's current model requirements from the upstream project before downloading, because backend dependencies and model IDs can change.
+
 ## Goals
 
 - Install the `threedee` CLI.
