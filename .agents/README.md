@@ -7,3 +7,4 @@ Start with:
 - `project.md`: product goal and architecture.
 - `commands.md`: common local commands and verification.
 - `handoff.md`: current implementation status and next likely steps.
+- `setup.md`: playbook for helping a user install and wire local GPU backends.

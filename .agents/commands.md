@@ -36,6 +36,17 @@ python -m pip install -e .
 
 ## OpenRouter
 
+Preferred local config:
+
+```bash
+threedee config show
+threedee config set-openrouter --shared-api-key "..."
+threedee config set-openrouter --llm-model "provider/model"
+threedee config set-openrouter --image-model "provider/image-model"
+```
+
+Environment variables are also supported.
+
 macOS/Linux:
 
 ```bash
@@ -52,6 +63,31 @@ Generate only through the OpenRouter image stage:
 
 ```bash
 threedee generate "stylized armored knight" --until image
+```
+
+Generate only the asset spec:
+
+```bash
+threedee generate "stylized armored knight" --until spec
+```
+
+## Local Backend Wiring
+
+Local mesh/rig/validation commands belong in ignored local config such as `threedee.local.toml`.
+
+Commands must create their configured output path:
+
+```toml
+[stages.mesh.trellis2]
+command = 'path/to/wrapper --input "{input}" --output "{output}" --seed "{seed}"'
+output = "asset_raw.glb"
+```
+
+After wiring a mesh backend:
+
+```bash
+threedee generate "simple stylized prop, isolated, one view" --until mesh
+threedee status
 ```
 
 ## Benchmarking

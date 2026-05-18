@@ -24,10 +24,24 @@ The heavy 3D model repositories and checkpoints are intentionally not vendored h
 
 - Keep the CLI dependency-light unless a dependency clearly pays for itself.
 - Do not commit generated `runs/` artifacts, API keys, checkpoints, model repos, or virtualenvs.
-- Preserve cross-platform behavior. This repo is developed on macOS, but the runtime target is Windows with an NVIDIA RTX 5090.
+- Preserve cross-platform behavior. Runtime targets may be Windows or Linux GPU workstations.
 - Prefer config-driven local commands over hardcoded model repo paths.
 - Keep stage outputs manifest-driven and inspectable.
 - Keep the project focused on local orchestration and reproducible asset generation workflows.
+- Treat heavy model installs as local environment setup, not repo implementation. Install external repos/checkpoints outside this repository and wire them through ignored local config.
+
+## Environment Setup Guidance
+
+When helping a user set up a GPU machine:
+
+- First verify the CLI itself with dry-run commands before touching model installs.
+- Inspect available tools and GPU/runtime support yourself before asking setup questions.
+- Ask where the user wants large model repos, checkpoints, and caches installed only when no obvious local convention exists.
+- Ask how the user wants to store OpenRouter secrets. Prefer `threedee config set-openrouter --shared-api-key ...`, which writes to ignored `threedee.local.toml`; environment variables are also acceptable.
+- Keep `threedee.toml` as shared defaults. Put machine-specific commands, paths, endpoints, model names, and secrets in ignored local config.
+- Install and test each heavy backend manually before wiring it into `threedee`. A stage command is ready only when it can take the documented placeholders and create the expected artifact path.
+- For image-to-3D mesh generation, guide reference image prompts toward one isolated subject in one view. Avoid character sheets, turnarounds, split-screen views, text, or duplicate subjects unless the selected backend explicitly supports multi-view input.
+- Record reusable setup findings in `.agents/handoff.md` or `.agents/setup.md`, but do not record API keys, checkpoint tokens, or private paths that should remain local.
 
 ## Common Commands
 
@@ -55,6 +69,7 @@ threedee generate "stylized armored knight" --dry-run
 - `threedee/openrouter.py`: OpenRouter LLM/image client.
 - `threedee/manifest.py`: run manifest helpers.
 - `.agents/`: agent-facing project notes.
+- `.agents/setup.md`: environment setup playbook for future agents.
 
 ## Current Defaults
 
