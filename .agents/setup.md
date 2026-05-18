@@ -95,6 +95,33 @@ Common TRELLIS.2 setup issues:
 - Backend code may assume a particular version of libraries such as `transformers`, `trimesh`, or `Pillow`. Prefer minimal compatibility shims or version pins in the backend environment rather than changing the `threedee` orchestrator.
 - GLB export may expose optional image codec issues. If a compressed texture extension fails, retry plain GLB export before changing mesh generation.
 
+## SkinTokens Rig Setup Pattern
+
+Use the official SkinTokens install instructions for the target environment. Keep the SkinTokens repo and checkpoints outside `threedee`.
+
+Recommended flow:
+
+1. Verify GPU, CUDA/PyTorch compatibility, and the Python version requested by SkinTokens.
+2. Install SkinTokens in its own environment.
+3. Download the provided pretrained checkpoints with the project downloader.
+4. Run a cheap import smoke test that checks CUDA visibility and `bpy` import before attempting full rigging.
+5. Run SkinTokens manually on a known mesh and confirm it writes a rigged GLB.
+6. Create a wrapper that accepts `--input` and `--output`, starts any required Blender/Python server, streams logs, and exits nonzero on failure.
+7. Wire the wrapper into ignored local config:
+   ```toml
+   [stages.rig.skintokens]
+   command = 'path/to/wrapper --input "{input}" --output "{output}"'
+   output = "asset_rigged.glb"
+   ```
+
+SkinTokens expects a mesh input. If continuing from an existing mesh-only run, make sure the cleanup artifact exists first, either by running the cleanup stage or by copying the raw mesh to the configured cleanup output when no cleanup command is configured.
+
+Common SkinTokens setup issues:
+
+- The CLI may start a local Blender/Python server for import/export. Verify that server starts and stops cleanly during both successful and failed runs.
+- Progress bars may emit Unicode block characters. Ensure the orchestrator or wrapper tolerates consoles that cannot encode them.
+- If using texture/scale transfer, confirm the exported rigged GLB preserves the source mesh's expected material structure.
+
 ## Prompt/Image Guidance
 
 For single-image mesh backends, ask image models for:

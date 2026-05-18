@@ -18,25 +18,24 @@ Implemented:
 - Layered local config through ignored `threedee.local.toml`
 - JSON run manifests
 - Config-driven local stage commands
+- Local stage output streaming to the console and per-run logs
 - Dry-run mode
 
 The repo has been initialized with git and has an initial commit.
 
 ## Known Gaps
 
-- TRELLIS.2 still needs to be installed and wrapped per target machine.
-- SkinTokens is not installed or wrapped yet.
 - Blender cleanup script is not implemented yet.
 - glTF validation command is configurable but not installed/wired.
 - No automated unit tests yet; smoke checks are command-based.
+
+TRELLIS.2 and SkinTokens have been proven locally on one target machine through ignored wrapper scripts and local config. Do not treat those wrapper paths as portable repo defaults; use `.agents/setup.md` to reproduce the pattern on another machine.
 
 ## Next Likely Work
 
 1. Install the CLI editable on the target machine.
 2. Configure OpenRouter through `threedee config set-openrouter`.
 3. Test `--until spec` and `--until image`.
-4. Install TRELLIS.2 outside this repo and get image-to-GLB inference working manually.
-5. Wrap the working TRELLIS command in ignored local config.
-6. Install SkinTokens and get rigging working manually.
-7. Wrap the working SkinTokens command in ignored local config.
-8. Add a Blender cleanup/preview script once raw meshes are being generated.
+4. Install and wire TRELLIS.2 outside this repo if the target machine does not already have it.
+5. Install and wire SkinTokens outside this repo if the target machine does not already have it.
+6. Add a Blender cleanup/preview script once raw meshes are being generated.
