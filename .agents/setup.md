@@ -1,62 +1,125 @@
 # Setup Playbook
 
-Use this when helping a user bring up `threedee` on a local GPU machine.
+Use this as a self-contained guide for helping a user install and configure [`rakanssh/threedee`](https://github.com/rakanssh/threedee) on a local GPU machine.
+
+## Goals
+
+- Install the `threedee` CLI.
+- Configure OpenRouter without committing secrets.
+- Install local GPU backends outside this repository.
+- Wire those backends through ignored local config.
+- Prove each stage with a small smoke test before attempting expensive full runs.
 
 ## Agent Posture
 
-- Be proactive: inspect the machine, installed tools, GPU visibility, Python versions, existing model folders, and current config before asking questions.
-- Make conservative defaults when the user has no preference: keep external repos/checkpoints outside `threedee`, use ignored local config, and start with the fastest backend settings that prove the pipeline.
-- Ask only for decisions that affect local ownership or cost: install location, API key storage, model/provider choice, and whether to run expensive downloads/inference.
-- After each backend install, verify it manually before wiring `threedee`.
-- Do not persist secrets, checkpoint tokens, or machine-private paths in tracked docs.
-- Treat gated model access as part of setup, not as a runtime surprise. Check every upstream model a backend loads and ask the user to accept licenses or request access before long test runs.
+- Be proactive: inspect the machine, shell, Python versions, GPU visibility, CUDA/runtime support, existing model folders, and current config before asking setup questions.
+- Ask only for decisions that require user approval, credentials, license acceptance, or long-running/large downloads.
+- Keep external model repositories, checkpoints, caches, virtual environments, and generated runs out of git.
+- Prefer ignored local config such as `threedee.local.toml` for machine-specific commands, paths, model names, endpoints, and secrets.
+- Do not persist API keys, Hugging Face tokens, private paths, or machine-specific workarounds in tracked docs.
+- Stop for user approval before installing system packages, downloading large checkpoints, accepting third-party licenses, or storing credentials.
 
-## Setup Order
+## Bootstrap The Repository
 
-1. Verify the orchestrator first:
+Start here when setting up `threedee` on a new machine:
+
+1. Choose or ask for a workspace directory.
+2. Clone the repository:
    ```bash
-   python -m compileall threedee
-   python -m threedee.cli generate "smoke test asset" --dry-run
-   python -m threedee.cli status
+   git clone https://github.com/rakanssh/threedee.git
+   cd threedee
    ```
-2. Install editable if the user wants the `threedee` console command:
+3. Read the project instructions:
    ```bash
+   cat AGENTS.md
+   cat README.md
+   cat .agents/setup.md
+   ```
+4. Inspect the repo state:
+   ```bash
+   git status --short --branch
+   python --version
+   ```
+5. Create and activate a Python environment for the CLI:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
    python -m pip install -e .
    ```
-3. Configure OpenRouter:
-   ```bash
-   threedee config show
-   threedee config set-openrouter --shared-api-key "..."
-   threedee config set-openrouter --llm-model "provider/model"
-   threedee config set-openrouter --image-model "provider/image-model"
+   On Windows PowerShell:
+   ```powershell
+   py -3.11 -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   python -m pip install -e .
    ```
-4. Test cloud stages before local 3D:
+6. Verify the orchestrator before touching heavy backends:
    ```bash
-   threedee generate "single stylized knight, isolated, one view" --until spec
-   threedee generate "single stylized knight, isolated, one view" --until image
+   python -m compileall threedee
+   threedee generate "smoke test asset" --dry-run
+   threedee status
    ```
-5. Install local mesh, cleanup, rigging, and validation tools one at a time.
-6. Confirm gated model access and authentication in the exact environment/user that will run the backend command.
-7. Wire each working local command into ignored `threedee.local.toml` or another untracked config passed with `--config`.
 
-If the user asks you to install a backend and the next step is clear, continue through install, manual smoke test, wrapper creation, local config wiring, and `threedee --until <stage>` verification. Stop only for approvals, credentials, paid API/model downloads, or an environment decision that cannot be inferred.
+## User Inputs And Approvals
 
-## What To Ask The User
+Use these project defaults:
 
-- Where should large model repos and checkpoints live?
-- Which mesh backend should be primary, and which should be benchmark-only?
-- Which rigging backend should be primary?
-- Should API keys be stored in ignored local config or environment variables?
-- Does the selected image model support image-only output, image+text output, or a provider-specific endpoint?
-- What artifact quality target should the first pass use: fast smoke test or high-quality output?
-- Does the selected local backend require gated model access or license acceptance?
-- Should backend checkpoints be pinned to specific model IDs/revisions for reproducibility?
+- Store OpenRouter API keys in ignored `threedee.local.toml` via `threedee config set-openrouter --shared-api-key`.
+- Keep `threedee.toml` as tracked defaults and put local commands/secrets in `threedee.local.toml`.
+- Install model repositories, checkpoints, and caches outside this repository.
+- Use `trellis2` as the primary mesh backend unless the user asks for another backend.
+- Use `skintokens` as the primary rig backend unless the user asks for another backend.
+- Start with fast/smoke-test backend settings, then increase quality after the pipeline works.
 
-If the user does not care, choose a conventional local tools/models directory outside the repo and record only the generic pattern, not private paths, in tracked notes.
+Ask the user only for:
 
-## Local Stage Contract
+- The OpenRouter API key.
+- Permission before large downloads, system package installs, or long inference runs.
+- Hugging Face license acceptance or gated model access when required.
+- A preferred install/cache location if the default local tools/models directory is unsuitable.
 
-Every configured command should accept placeholders from `threedee.toml`:
+## Configure OpenRouter
+
+Inspect effective config:
+
+```bash
+threedee config show
+```
+
+Store OpenRouter settings in ignored local config:
+
+```bash
+threedee config set-openrouter --shared-api-key "..."
+threedee config set-openrouter --llm-model "provider/model"
+threedee config set-openrouter --image-model "provider/image-model"
+```
+
+Before local 3D setup, prove cloud stages:
+
+```bash
+threedee generate "single stylized knight, isolated, one view" --until spec
+threedee generate "single stylized knight, isolated, one view" --until image
+```
+
+For riggable characters, guide reference prompts toward a single subject in a rigging-safe neutral A-pose with arms and hands separated from the torso.
+
+## Backend Setup Contract
+
+Install each backend independently before wiring it into `threedee`.
+
+For each backend:
+
+1. Read the backend's official install instructions.
+2. Verify GPU/runtime compatibility.
+3. Identify required model repositories and any gated access.
+4. Authenticate in the same environment and OS user that will run inference.
+5. Install the backend outside `threedee`.
+6. Download checkpoints using the backend's supported method.
+7. Run the backend manually on a known input.
+8. Create a wrapper script that accepts the `threedee` placeholders.
+9. Wire the wrapper into ignored local config.
+10. Verify through `threedee` with the smallest useful run.
+
+Every stage command should accept the relevant placeholders:
 
 - `{input}`: stage input path
 - `{output}`: artifact path the command must create
@@ -64,72 +127,69 @@ Every configured command should accept placeholders from `threedee.toml`:
 - `{prompt}`: original user prompt, when useful
 - `{seed}`: seed, if provided
 
-Quote placeholders in commands because paths may contain spaces. The command is successful only if it exits with code 0 and creates `{output}`.
+Quote placeholders because paths may contain spaces. A command is successful only if it exits with code 0 and creates `{output}`. Wrappers should stream progress to stdout/stderr so `threedee` can show live progress while also preserving per-run logs.
 
-Wrappers should stream meaningful progress to stdout/stderr and preserve backend logs. This is especially important during first runs, when dependency downloads and checkpoint loading may take a long time before GPU utilization is visible.
+## Mesh Backend Pattern
 
-## TRELLIS.2 Mesh Setup Pattern
+Use this pattern for image-to-3D backends such as TRELLIS.2 or Hunyuan3D:
 
-Use the official TRELLIS.2 install instructions for the target environment. Keep the TRELLIS.2 repo and checkpoints outside `threedee`.
-
-Recommended flow:
-
-1. Verify GPU and CUDA/PyTorch compatibility.
-2. Identify every upstream model the selected TRELLIS.2 configuration loads. Request/accept gated model access before the first full run, and authenticate from the same local environment/user that will execute TRELLIS.2.
-3. Record the main TRELLIS.2 model ID and any important auxiliary model IDs or revisions in local agent notes. Prefer pinned revisions when reproducing a known-good environment.
-4. Install TRELLIS.2 and get its example image-to-GLB path working manually.
-5. Create a small wrapper that accepts `--input`, `--output`, and `--seed`.
-6. Start with the fastest supported pipeline/resolution to prove the CLI contract.
-7. Wire the wrapper into local config:
+1. Install the backend outside the repo.
+2. Run its official image-to-mesh example manually.
+3. Create a wrapper with this shape:
+   ```bash
+   backend-wrapper --input "{input}" --output "{output}" --seed "{seed}"
+   ```
+4. Start with a fast/low-resolution setting for the first proof.
+5. Wire local config:
    ```toml
-   [stages.mesh.trellis2]
-   command = 'path/to/wrapper --input "{input}" --output "{output}" --seed "{seed}"'
+   [stages.mesh.<backend>]
+   command = 'backend-wrapper --input "{input}" --output "{output}" --seed "{seed}"'
    output = "asset_raw.glb"
    ```
-
-Avoid baking machine-specific paths into tracked files. Prefer ignored local config for actual commands.
-
-Common TRELLIS.2 setup issues:
-
-- Gated auxiliary models can fail after the main checkpoint downloads successfully. Read the stage log and request access to the specific model named in the error.
-- Backend code may assume a particular version of libraries such as `transformers`, `trimesh`, or `Pillow`. Prefer minimal compatibility shims or version pins in the backend environment rather than changing the `threedee` orchestrator.
-- GLB export may expose optional image codec issues. If a compressed texture extension fails, retry plain GLB export before changing mesh generation.
-
-## SkinTokens Rig Setup Pattern
-
-Use the official SkinTokens install instructions for the target environment. Keep the SkinTokens repo and checkpoints outside `threedee`.
-
-Recommended flow:
-
-1. Verify GPU, CUDA/PyTorch compatibility, and the Python version requested by SkinTokens.
-2. Install SkinTokens in its own environment.
-3. Download the provided pretrained checkpoints with the project downloader.
-4. Run a cheap import smoke test that checks CUDA visibility and `bpy` import before attempting full rigging.
-5. Run SkinTokens manually on a known mesh and confirm it writes a rigged GLB.
-6. Create a wrapper that accepts `--input` and `--output`, starts any required Blender/Python server, streams logs, and exits nonzero on failure.
-7. Wire the wrapper into ignored local config:
-   ```toml
-   [stages.rig.skintokens]
-   command = 'path/to/wrapper --input "{input}" --output "{output}"'
-   output = "asset_rigged.glb"
+6. Verify:
+   ```bash
+   threedee generate "simple stylized prop, isolated, one view" --until mesh
+   threedee status
    ```
 
-SkinTokens expects a mesh input. If continuing from an existing mesh-only run, make sure the cleanup artifact exists first, either by running the cleanup stage or by copying the raw mesh to the configured cleanup output when no cleanup command is configured.
+Record tested backend repo commits, model IDs, and important package pins in local notes when reproducibility matters. Do not hardcode private paths in tracked files.
 
-Common SkinTokens setup issues:
+## Rig Backend Pattern
 
-- The CLI may start a local Blender/Python server for import/export. Verify that server starts and stops cleanly during both successful and failed runs.
-- Progress bars may emit Unicode block characters. Ensure the orchestrator or wrapper tolerates consoles that cannot encode them.
-- If using texture/scale transfer, confirm the exported rigged GLB preserves the source mesh's expected material structure.
+Use this pattern for mesh-to-rig backends such as SkinTokens or RigAnything:
 
-## Prompt/Image Guidance
+1. Install the backend outside the repo.
+2. Download its pretrained checkpoints.
+3. Run a cheap import smoke test, including CUDA visibility and any required 3D import/export library.
+4. Run the backend manually on a known mesh.
+5. Create a wrapper with this shape:
+   ```bash
+   rig-wrapper --input "{input}" --output "{output}"
+   ```
+6. Wire local config:
+   ```toml
+   [stages.rig.<backend>]
+   command = 'rig-wrapper --input "{input}" --output "{output}"'
+   output = "asset_rigged.glb"
+   ```
+7. Verify:
+   ```bash
+   threedee benchmark rig <backend> <job_id>
+   threedee status <job_id>
+   ```
+
+Rig backends expect a mesh input. For an existing mesh-only run, ensure the cleanup artifact exists first. If no cleanup command is configured, copying the raw mesh to the configured cleanup output is acceptable for a local resume.
+
+## Prompt Guidance
 
 For single-image mesh backends, ask image models for:
 
 - exactly one subject or object
 - exactly one view, preferably three-quarter front
-- full body/object visible, neutral pose for riggable subjects
-- clean background, no text or watermark
+- full body/object visible
+- rigging-safe neutral A-pose for characters
+- arms, hands, legs, clothing, armor, and props separated from the torso
+- clean background, no text, no watermark
 
 Avoid:
 
@@ -138,21 +198,56 @@ Avoid:
 - turnarounds
 - split panels
 - duplicate subjects
+- hands touching the body
+- crossed arms
+- cloaks, props, or weapons bridging limbs to the torso
 
-## Verification
+## Final Handoff And User Test
 
-After wiring a mesh command:
+After setup, report what was configured:
+
+- CLI install location and activation command.
+- OpenRouter config status, without printing secrets.
+- Mesh backend name and whether its manual smoke test passed.
+- Rig backend name and whether its manual smoke test passed.
+- Any model access, license, checkpoint, or version-pin notes the user should know.
+- The exact local config file that contains machine-specific commands.
+
+Then ask the user to run a small test from their own terminal:
 
 ```bash
-threedee generate "simple stylized prop, isolated, one view" --until mesh
+threedee config show
+threedee generate "smoke test asset" --dry-run
+threedee generate "single riggable character, neutral A-pose, isolated" --until image
 threedee status
 ```
 
-Check the run folder for:
+If the user wants to test the local mesh backend, ask them to run:
+
+```bash
+threedee generate "single riggable character, neutral A-pose, isolated" --until mesh
+threedee status
+```
+
+If the user wants to test the local rig backend after a mesh exists, ask them to run:
+
+```bash
+threedee benchmark rig skintokens <job_id>
+threedee status <job_id>
+```
+
+For mesh tests, confirm the run folder contains:
 
 - `reference.png`
 - `asset_raw.glb`
 - `mesh:<backend>.log`
 - `manifest.json`
 
-If a stage fails, read the stage log first and fix the external command before changing the orchestrator.
+For rig tests, confirm the run folder contains:
+
+- `asset_clean.glb` or another configured cleanup input
+- `asset_rigged.glb`
+- `rig:<backend>.log` or `benchmark_rig:<backend>.log`
+- `manifest.json`
+
+If a stage fails, read the stage log first. Fix the external backend command before changing the orchestrator unless the failure is clearly a `threedee` path, logging, or manifest bug.
