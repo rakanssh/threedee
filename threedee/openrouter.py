@@ -85,7 +85,7 @@ class OpenRouterClient:
             headers={
                 "Authorization": f"Bearer {self.config.api_key}",
                 "Content-Type": "application/json",
-                "HTTP-Referer": "https://localhost/threedee",
+                "HTTP-Referer": self.config.app_url,
                 "X-Title": self.config.app_title,
             },
         )

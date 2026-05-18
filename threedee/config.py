@@ -18,6 +18,7 @@ llm_model = "google/gemini-3-flash-preview"
 image_model = "openai/gpt-5.4-image-2"
 api_key_env = "OPENROUTER_API_KEY"
 app_title = "threedee"
+app_url = "https://github.com/rakanssh/threedee"
 
 [runs]
 dir = "runs"
@@ -63,6 +64,7 @@ class OpenRouterConfig:
     image_model: str
     api_key_env: str
     app_title: str
+    app_url: str
 
     @property
     def api_key(self) -> str | None:
@@ -114,6 +116,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
             image_model=str(openrouter.get("image_model", "openai/gpt-5.4-image-2")),
             api_key_env=str(openrouter.get("api_key_env", "OPENROUTER_API_KEY")),
             app_title=str(openrouter.get("app_title", "threedee")),
+            app_url=str(openrouter.get("app_url", "https://github.com/rakanssh/threedee")),
         ),
         runs_dir=Path(str(runs.get("dir", "runs"))),
         mesh_stages={
