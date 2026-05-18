@@ -58,9 +58,12 @@ class OpenRouterClient:
                 "single 3D asset",
                 "isolated full body/object reference",
                 "exactly one subject in exactly one view",
-                "neutral A-pose or rest pose if the subject can be rigged",
+                "rigging-friendly neutral A-pose if the subject can be rigged",
+                "arms slightly away from torso with visible gaps around armpits, elbows, hands, and hips",
+                "hands not touching the body, armor, cloak, weapons, or props",
+                "legs separated enough that feet and inner legs are distinct",
                 "clear materials and silhouette",
-                "negative prompt for unwanted artifacts, including multi-view sheets and duplicate subjects",
+                "negative prompt for unwanted artifacts, including multi-view sheets, duplicate subjects, and limb-body contact",
             ],
         }
         response = self.chat(

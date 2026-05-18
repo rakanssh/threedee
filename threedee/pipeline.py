@@ -31,6 +31,16 @@ PLACEHOLDER_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
 )
 
+RIGGING_SAFE_POSE = (
+    "rigging-friendly neutral A-pose, arms held 30 to 45 degrees away from the torso, "
+    "hands clearly separated from body and armor, visible gaps at armpits, elbows, wrists, hips, and between legs"
+)
+
+RIGGING_UNSAFE_CONTACTS = (
+    "hands touching torso, arms pressed against body, fused fingers, cloak or cape touching arms, "
+    "weapons or props connecting limbs to torso, legs touching each other, hidden hands, crossed arms"
+)
+
 
 class PipelineError(RuntimeError):
     pass
@@ -220,14 +230,14 @@ def _run_spec(
             spec = {
                 "prompt": options.prompt,
                 "asset": options.prompt,
-                "pose": "neutral rest pose",
+                "pose": RIGGING_SAFE_POSE,
                 "image_prompt": (
                     f"{options.prompt}, isolated single 3D game asset reference, exactly one subject, "
-                    "one three-quarter front view only, clean background"
+                    f"one three-quarter front view only, {RIGGING_SAFE_POSE}, clean background"
                 ),
                 "negative_prompt": (
                     "cropped, extra limbs, multiple subjects, duplicate character, character sheet, "
-                    "front and side views, turnaround, split screen, text, watermark"
+                    f"front and side views, turnaround, split screen, text, watermark, {RIGGING_UNSAFE_CONTACTS}"
                 ),
             }
         else:
@@ -453,17 +463,21 @@ def _image_prompt(prompt: str, spec: dict[str, Any]) -> str:
     if not image_prompt:
         image_prompt = (
             f"{prompt}, single isolated 3D asset concept, full body or complete object, "
-            "exactly one subject, one three-quarter front view only, neutral rest pose, "
+            f"exactly one subject, one three-quarter front view only, {RIGGING_SAFE_POSE}, "
             "clean white background, no text"
         )
     image_prompt = (
         f"{image_prompt}\n"
         "Composition requirements: show exactly one subject/object in a single image view. "
         "Do not create a character sheet, turnaround, front-and-side comparison, split screen, "
-        "multiple panels, duplicate subject, or any side-by-side views."
+        "multiple panels, duplicate subject, or any side-by-side views.\n"
+        f"Rigging requirements: {RIGGING_SAFE_POSE}. Keep hands, arms, legs, clothing, armor, and props separated "
+        "so the silhouette has clean visible gaps for skinning and skeleton inference."
     )
     if negative:
-        image_prompt = f"{image_prompt}\nAvoid: {negative}"
+        image_prompt = f"{image_prompt}\nAvoid: {negative}, {RIGGING_UNSAFE_CONTACTS}"
+    else:
+        image_prompt = f"{image_prompt}\nAvoid: {RIGGING_UNSAFE_CONTACTS}"
     return str(image_prompt)
 
 
