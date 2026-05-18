@@ -70,6 +70,7 @@ def generate(options: GenerateOptions) -> Path:
         },
     )
     save_manifest(run_dir, manifest)
+    _announce(f"run: {run_dir}")
 
     try:
         client = None if options.dry_run else OpenRouterClient(options.config.openrouter)
@@ -216,6 +217,7 @@ def _run_spec(
 ) -> dict[str, Any]:
     stage_started(manifest, "spec")
     save_manifest(run_dir, manifest)
+    _announce("spec: building asset spec")
     spec_path = run_dir / "asset_spec.json"
     try:
         if options.dry_run:
@@ -238,6 +240,7 @@ def _run_spec(
         save_json(spec_path, spec)
         stage_done(manifest, "spec", artifact=str(spec_path), metadata={"model": options.config.openrouter.llm_model})
         save_manifest(run_dir, manifest)
+        _announce(f"spec: wrote {spec_path}")
         return spec
     except Exception as exc:
         stage_failed(manifest, "spec", str(exc))
@@ -254,6 +257,7 @@ def _run_image(
 ) -> Path:
     stage_started(manifest, "image")
     save_manifest(run_dir, manifest)
+    _announce("image: creating reference image")
     output = run_dir / "reference.png"
     try:
         if options.input_image:
@@ -277,6 +281,7 @@ def _run_image(
                 metadata={"model": options.config.openrouter.image_model, "prompt": prompt},
             )
         save_manifest(run_dir, manifest)
+        _announce(f"image: wrote {output}")
         return output
     except Exception as exc:
         stage_failed(manifest, "image", str(exc))
@@ -295,6 +300,7 @@ def _run_cleanup(
     output = run_dir / config.output
     if not config.command:
         stage_started(manifest, stage_name)
+        _announce("clean: no cleanup command configured; copying raw mesh")
         shutil.copyfile(raw_mesh, output)
         stage_done(manifest, stage_name, artifact=str(output), metadata={"mode": "copy_raw_mesh"})
         save_manifest(run_dir, manifest)
@@ -355,6 +361,7 @@ def _run_configured_stage(
     save_manifest(run_dir, manifest)
 
     if dry_run:
+        _announce(f"{stage_name}: dry run placeholder")
         output.write_bytes(b"dry-run placeholder artifact\n")
         stage_done(manifest, stage_name, artifact=str(output), metadata={"mode": "dry_run"})
         save_manifest(run_dir, manifest)
@@ -379,18 +386,27 @@ def _run_configured_stage(
         seed=seed,
     )
     log_path = run_dir / f"{_safe_stage_name(stage_name)}.log"
+    _announce(f"{stage_name}: running local command")
+    _announce(f"{stage_name}: streaming output; full log at {log_path}")
     with log_path.open("w", encoding="utf-8") as log:
         log.write(f"$ {command}\n\n")
-        completed = subprocess.run(
+        log.flush()
+        completed = subprocess.Popen(
             command,
             cwd=run_dir,
             shell=True,
-            stdout=log,
+            stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
         )
-    if completed.returncode != 0:
-        error = f"{stage_name} command exited {completed.returncode}. See {log_path}"
+        assert completed.stdout is not None
+        _tee_process_output(completed.stdout, log)
+        returncode = completed.wait()
+    if returncode != 0:
+        error = f"{stage_name} command exited {returncode}. See {log_path}"
         stage_failed(manifest, stage_name, error)
         save_manifest(run_dir, manifest)
         raise PipelineError(error)
@@ -402,6 +418,7 @@ def _run_configured_stage(
 
     stage_done(manifest, stage_name, artifact=str(output), metadata={"log": str(log_path), "command": command})
     save_manifest(run_dir, manifest)
+    _announce(f"{stage_name}: wrote {output}")
     return output
 
 
@@ -468,3 +485,18 @@ def _stop_after(until: str, stage: str) -> bool:
 
 def _safe_stage_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_.-]+", "_", name)
+
+
+def _announce(message: str) -> None:
+    print(f"[threedee] {message}", flush=True)
+
+
+def _tee_process_output(stdout, log) -> None:
+    while True:
+        chunk = stdout.read(1)
+        if not chunk:
+            break
+        sys.stdout.write(chunk)
+        sys.stdout.flush()
+        log.write(chunk)
+        log.flush()
