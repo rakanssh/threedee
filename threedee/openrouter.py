@@ -26,19 +26,28 @@ class ImageResult:
 class OpenRouterClient:
     def __init__(self, config: OpenRouterConfig):
         self.config = config
-        if not config.api_key:
-            raise OpenRouterError(f"Missing API key env var: {config.api_key_env}")
 
-    def chat(self, *, model: str, messages: list[dict[str, Any]], extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    def chat(
+        self,
+        *,
+        url: str,
+        api_key: str,
+        model: str,
+        messages: list[dict[str, Any]],
+        extra: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": model,
             "messages": messages,
         }
         if extra:
             payload.update(extra)
-        return self._post_json("/chat/completions", payload)
+        return self._post_json(url, payload, api_key)
 
-    def asset_spec(self, *, prompt: str, model: str) -> dict[str, Any]:
+    def asset_spec(self, *, prompt: str) -> dict[str, Any]:
+        api_key = self.config.llm_key
+        if not api_key:
+            raise OpenRouterError(f"Missing LLM API key. Set llm_api_key or env var: {self.config.api_key_env}")
         system = (
             "You turn short user prompts into structured 3D asset generation specs. "
             "Return only JSON. Do not wrap it in markdown."
@@ -54,7 +63,9 @@ class OpenRouterClient:
             ],
         }
         response = self.chat(
-            model=model,
+            url=self.config.llm_url,
+            api_key=api_key,
+            model=self.config.llm_model,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(user)},
@@ -66,24 +77,29 @@ class OpenRouterClient:
             raise OpenRouterError("LLM response did not contain text content")
         return _parse_jsonish(content)
 
-    def reference_image(self, *, prompt: str, model: str) -> ImageResult:
+    def reference_image(self, *, prompt: str) -> ImageResult:
+        api_key = self.config.image_key
+        if not api_key:
+            raise OpenRouterError(f"Missing image API key. Set image_api_key, llm_api_key, or env var: {self.config.api_key_env}")
         response = self.chat(
-            model=model,
+            url=self.config.image_url,
+            api_key=api_key,
+            model=self.config.image_model,
             messages=[{"role": "user", "content": prompt}],
-            extra={"modalities": ["image", "text"]},
+            extra={"modalities": ["image"]},
         )
         image_bytes = _extract_image_bytes(response)
         text = _first_text(response)
         return ImageResult(image_bytes=image_bytes, raw_response=response, text=text)
 
-    def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _post_json(self, url: str, payload: dict[str, Any], api_key: str) -> dict[str, Any]:
         body = json.dumps(payload).encode("utf-8")
         request = urllib.request.Request(
-            self.config.base_url + path,
+            url,
             data=body,
             method="POST",
             headers={
-                "Authorization": f"Bearer {self.config.api_key}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": self.config.app_url,
                 "X-Title": self.config.app_title,

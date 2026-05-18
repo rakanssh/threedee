@@ -228,7 +228,7 @@ def _run_spec(
             }
         else:
             assert client is not None
-            spec = client.asset_spec(prompt=options.prompt, model=options.config.openrouter.llm_model)
+            spec = client.asset_spec(prompt=options.prompt)
         save_json(spec_path, spec)
         stage_done(manifest, "spec", artifact=str(spec_path), metadata={"model": options.config.openrouter.llm_model})
         save_manifest(run_dir, manifest)
@@ -259,7 +259,7 @@ def _run_image(
         else:
             assert client is not None
             prompt = _image_prompt(options.prompt, spec)
-            result = client.reference_image(prompt=prompt, model=options.config.openrouter.image_model)
+            result = client.reference_image(prompt=prompt)
             output.write_bytes(result.image_bytes)
             save_json(run_dir / "openrouter_image_response.json", result.raw_response)
             if result.text:

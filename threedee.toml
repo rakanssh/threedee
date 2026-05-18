@@ -2,6 +2,8 @@
 
 [openrouter]
 base_url = "https://openrouter.ai/api/v1"
+llm_url = "https://openrouter.ai/api/v1/chat/completions"
+image_url = "https://openrouter.ai/api/v1/chat/completions"
 llm_model = "google/gemini-3-flash-preview"
 image_model = "openai/gpt-5.4-image-2"
 api_key_env = "OPENROUTER_API_KEY"

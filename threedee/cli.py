@@ -5,7 +5,13 @@ import argparse
 import json
 import sys
 
-from .config import DEFAULT_CONFIG_PATH, load_config, write_default_config
+from .config import (
+    DEFAULT_CONFIG_PATH,
+    load_config,
+    local_config_path,
+    set_local_openrouter_config,
+    write_default_config,
+)
 from .manifest import load_manifest
 from .pipeline import (
     GenerateOptions,
@@ -24,7 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except (PipelineError, FileExistsError, FileNotFoundError, KeyError, RuntimeError) as exc:
+    except (PipelineError, FileExistsError, FileNotFoundError, KeyError, RuntimeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
@@ -36,6 +42,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     init = sub.add_parser("init", help="Write a default threedee.toml config.")
     init.set_defaults(func=cmd_init)
+
+    config_cmd = sub.add_parser("config", help="Show and edit threedee config.")
+    config_sub = config_cmd.add_subparsers(dest="config_command", required=True)
+
+    config_show = config_sub.add_parser("show", help="Show the effective merged config.")
+    config_show.add_argument("--secrets", action="store_true", help="Show secret presence without printing secret values.")
+    config_show.set_defaults(func=cmd_config_show)
+
+    config_set_openrouter = config_sub.add_parser("set-openrouter", help="Set OpenRouter config in threedee.local.toml.")
+    config_set_openrouter.add_argument("--llm-model", type=_non_empty)
+    config_set_openrouter.add_argument("--image-model", type=_non_empty)
+    config_set_openrouter.add_argument("--llm-url", type=_non_empty)
+    config_set_openrouter.add_argument("--image-url", type=_non_empty)
+    config_set_openrouter.add_argument("--llm-api-key", type=_non_empty)
+    config_set_openrouter.add_argument("--image-api-key", type=_non_empty)
+    config_set_openrouter.add_argument("--shared-api-key", type=_non_empty)
+    config_set_openrouter.set_defaults(func=cmd_config_set_openrouter, command_parser=config_set_openrouter)
 
     generate_cmd = sub.add_parser("generate", help="Generate a rigged 3D asset run.")
     generate_cmd.add_argument("prompt", help="Asset prompt.")
@@ -73,6 +96,61 @@ def build_parser() -> argparse.ArgumentParser:
 def cmd_init(args: argparse.Namespace) -> int:
     write_default_config(args.config)
     print(f"wrote {args.config}")
+    return 0
+
+
+def cmd_config_show(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    openrouter = config.openrouter
+    local_path = local_config_path(args.config)
+    data = {
+        "config": {
+            "base": str(args.config),
+            "local": str(local_path),
+            "local_exists": local_path.exists(),
+        },
+        "openrouter": {
+            "base_url": openrouter.base_url,
+            "llm_url": openrouter.llm_url,
+            "image_url": openrouter.image_url,
+            "llm_model": openrouter.llm_model,
+            "image_model": openrouter.image_model,
+            "api_key_env": openrouter.api_key_env,
+            "llm_api_key": _secret_display(
+                present=openrouter.llm_key is not None,
+                source=_llm_secret_source(openrouter),
+                show_source=args.secrets,
+            ),
+            "image_api_key": _secret_display(
+                present=openrouter.image_key is not None,
+                source=_image_secret_source(openrouter),
+                show_source=args.secrets,
+            ),
+            "app_title": openrouter.app_title,
+            "app_url": openrouter.app_url,
+        },
+    }
+    print(json.dumps(data, indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_config_set_openrouter(args: argparse.Namespace) -> int:
+    updates = {
+        "llm_model": args.llm_model,
+        "image_model": args.image_model,
+        "llm_url": args.llm_url,
+        "image_url": args.image_url,
+        "llm_api_key": args.llm_api_key,
+        "image_api_key": args.image_api_key,
+    }
+    values = {key: value for key, value in updates.items() if value is not None}
+    if args.shared_api_key is not None:
+        values["llm_api_key"] = args.shared_api_key
+    if not values:
+        args.command_parser.print_help(sys.stderr)
+        return 1
+    local_path = set_local_openrouter_config(args.config, values)
+    print(f"wrote {local_path}")
     return 0
 
 
@@ -162,6 +240,34 @@ def _resolve_run_dir(runs_dir: Path, job_id: str | None) -> Path:
     if not run_dir.exists():
         raise FileNotFoundError(f"Run not found: {run_dir}")
     return run_dir
+
+
+def _non_empty(value: str) -> str:
+    if not value.strip():
+        raise argparse.ArgumentTypeError("must not be empty")
+    return value
+
+
+def _secret_display(*, present: bool, source: str, show_source: bool) -> str | None:
+    if not present:
+        return None
+    return source if show_source else "***"
+
+
+def _llm_secret_source(openrouter) -> str:
+    if openrouter.llm_api_key:
+        return "set in local config"
+    if openrouter.llm_key:
+        return f"set via env var {openrouter.api_key_env}"
+    return "unset"
+
+
+def _image_secret_source(openrouter) -> str:
+    if openrouter.image_api_key:
+        return "set in local config"
+    if openrouter.llm_key:
+        return "using LLM API key"
+    return "unset"
 
 
 if __name__ == "__main__":

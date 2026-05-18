@@ -22,7 +22,28 @@ python -m pip install -e .
 
 ## Configure
 
-Set your OpenRouter key:
+Inspect the effective config:
+
+```bash
+threedee config show
+```
+
+Set OpenRouter model names and keys in `threedee.local.toml`, which is ignored by git:
+
+```bash
+threedee config set-openrouter --llm-model google/gemini-3-flash-preview
+threedee config set-openrouter --image-model openai/gpt-5.4-image-2
+threedee config set-openrouter --shared-api-key "..."
+```
+
+If needed, set separate completion endpoints:
+
+```bash
+threedee config set-openrouter --llm-url https://openrouter.ai/api/v1/chat/completions
+threedee config set-openrouter --image-url https://openrouter.ai/api/v1/chat/completions
+```
+
+You can also use environment variables instead of local config secrets:
 
 ```bash
 export OPENROUTER_API_KEY="..."
@@ -32,6 +53,12 @@ PowerShell:
 
 ```powershell
 $env:OPENROUTER_API_KEY = "..."
+```
+
+The image key falls back to the LLM key unless you set a separate image key:
+
+```bash
+threedee config set-openrouter --image-api-key "..."
 ```
 
 Edit `threedee.toml` on the target GPU machine and fill in the local stage commands for TRELLIS.2 and SkinTokens. Each command gets formatted with:

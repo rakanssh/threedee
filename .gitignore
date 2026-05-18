@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 venv/
 .env
+threedee.local.toml
 runs/
 *.egg-info/
 build/
