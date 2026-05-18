@@ -223,8 +223,14 @@ def _run_spec(
                 "prompt": options.prompt,
                 "asset": options.prompt,
                 "pose": "neutral rest pose",
-                "image_prompt": f"{options.prompt}, isolated single 3D game asset reference, clean background",
-                "negative_prompt": "cropped, extra limbs, multiple subjects, text, watermark",
+                "image_prompt": (
+                    f"{options.prompt}, isolated single 3D game asset reference, exactly one subject, "
+                    "one three-quarter front view only, clean background"
+                ),
+                "negative_prompt": (
+                    "cropped, extra limbs, multiple subjects, duplicate character, character sheet, "
+                    "front and side views, turnaround, split screen, text, watermark"
+                ),
             }
         else:
             assert client is not None
@@ -434,8 +440,15 @@ def _image_prompt(prompt: str, spec: dict[str, Any]) -> str:
     if not image_prompt:
         image_prompt = (
             f"{prompt}, single isolated 3D asset concept, full body or complete object, "
-            "neutral rest pose, three-quarter front view, clean white background, no text"
+            "exactly one subject, one three-quarter front view only, neutral rest pose, "
+            "clean white background, no text"
         )
+    image_prompt = (
+        f"{image_prompt}\n"
+        "Composition requirements: show exactly one subject/object in a single image view. "
+        "Do not create a character sheet, turnaround, front-and-side comparison, split screen, "
+        "multiple panels, duplicate subject, or any side-by-side views."
+    )
     if negative:
         image_prompt = f"{image_prompt}\nAvoid: {negative}"
     return str(image_prompt)

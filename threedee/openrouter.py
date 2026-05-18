@@ -57,9 +57,10 @@ class OpenRouterClient:
             "requirements": [
                 "single 3D asset",
                 "isolated full body/object reference",
+                "exactly one subject in exactly one view",
                 "neutral A-pose or rest pose if the subject can be rigged",
                 "clear materials and silhouette",
-                "negative prompt for unwanted artifacts",
+                "negative prompt for unwanted artifacts, including multi-view sheets and duplicate subjects",
             ],
         }
         response = self.chat(
