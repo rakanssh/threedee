@@ -1,0 +1,43 @@
+# threedee local pipeline config
+
+[openrouter]
+base_url = "https://openrouter.ai/api/v1"
+llm_model = "google/gemini-3-flash-preview"
+image_model = "openai/gpt-5.4-image-2"
+api_key_env = "OPENROUTER_API_KEY"
+app_title = "threedee"
+
+[runs]
+dir = "runs"
+
+[stages.mesh.trellis2]
+# Fill this in on the target GPU machine after installing TRELLIS.2.
+# Available placeholders: {input}, {output}, {run_dir}, {prompt}, {seed}
+command = ""
+output = "asset_raw.glb"
+
+[stages.mesh.hunyuan3d]
+# Optional benchmark backend.
+command = ""
+output = "asset_raw_hunyuan.glb"
+
+[stages.cleanup.blender]
+# Optional. If empty, the raw mesh is copied forward as asset_clean.glb.
+# Available placeholders: {input}, {output}, {run_dir}
+command = ""
+output = "asset_clean.glb"
+
+[stages.rig.skintokens]
+# Fill this in on the target GPU machine after installing SkinTokens.
+# Available placeholders: {input}, {output}, {run_dir}
+command = ""
+output = "asset_rigged.glb"
+
+[stages.rig.riganything]
+# Optional benchmark backend.
+command = ""
+output = "asset_rigged_riganything.glb"
+
+[tools]
+# Optional final validator command. Available placeholders: {input}, {output}, {run_dir}
+gltf_validator = ""
