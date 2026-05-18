@@ -137,9 +137,7 @@ def generate(options: GenerateOptions) -> Path:
 
 def benchmark_mesh(config: AppConfig, run_dir: Path, backend: str, dry_run: bool = False) -> Path:
     manifest = load_manifest(run_dir)
-    reference = Path(manifest["artifacts"].get("image", run_dir / "reference.png"))
-    if not reference.is_absolute():
-        reference = run_dir / reference
+    reference = _resolve_run_artifact(run_dir, manifest["artifacts"].get("image"), "reference.png")
     return _run_configured_stage(
         run_dir=run_dir,
         manifest=manifest,
@@ -155,9 +153,7 @@ def benchmark_mesh(config: AppConfig, run_dir: Path, backend: str, dry_run: bool
 
 def benchmark_rig(config: AppConfig, run_dir: Path, backend: str, dry_run: bool = False) -> Path:
     manifest = load_manifest(run_dir)
-    clean = Path(manifest["artifacts"].get("clean", run_dir / config.cleanup_stage.output))
-    if not clean.is_absolute():
-        clean = run_dir / clean
+    clean = _resolve_run_artifact(run_dir, manifest["artifacts"].get("clean"), config.cleanup_stage.output)
     return _run_configured_stage(
         run_dir=run_dir,
         manifest=manifest,
@@ -487,6 +483,13 @@ def _safe_stage_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_.-]+", "_", name)
 
 
+def _resolve_run_artifact(run_dir: Path, value: Any, fallback: str) -> Path:
+    path = Path(str(value or fallback))
+    if path.is_absolute() or path.exists():
+        return path
+    return run_dir / path
+
+
 def _announce(message: str) -> None:
     print(f"[threedee] {message}", flush=True)
 
@@ -496,7 +499,15 @@ def _tee_process_output(stdout, log) -> None:
         chunk = stdout.read(1)
         if not chunk:
             break
-        sys.stdout.write(chunk)
-        sys.stdout.flush()
+        _write_console_chunk(chunk)
         log.write(chunk)
         log.flush()
+
+
+def _write_console_chunk(chunk: str) -> None:
+    try:
+        sys.stdout.write(chunk)
+    except UnicodeEncodeError:
+        encoding = sys.stdout.encoding or "utf-8"
+        sys.stdout.write(chunk.encode(encoding, errors="replace").decode(encoding, errors="replace"))
+    sys.stdout.flush()
