@@ -13,3 +13,4 @@ dist/
 .mypy_cache/
 .coverage
 .DS_Store
+tools/
